@@ -21,37 +21,28 @@ public class PartidaAjedrez {
     private LinkedList<String> movimientos;
     private Map<String, Pieza> tablero;
 
+    public String getJugadorBlancas() {
+        return jugadorBlancas;
+    }
+
+    public void setJugadorBlancas(String jugadorBlancas) {
+        this.jugadorBlancas = jugadorBlancas;
+    }
+
+    public String getJugadorNegras() {
+        return jugadorNegras;
+    }
+
+    public void setJugadorNegras(String jugadorNegras) {
+        this.jugadorNegras = jugadorNegras;
+    }
+
     public PartidaAjedrez(String jugadorBlancas, String jugadorNegras) {
         this.jugadorBlancas = jugadorBlancas;
         this.jugadorNegras = jugadorNegras;
         this.movimientos = new LinkedList<>();
         this.tablero = new HashMap<>();
         inicializarTablero();
-    }
-
-    public void mostrarTablero() {
-        IO.println("\nTablero de Ajedrez");
-        IO.println("----------------------------");
-
-        for (int i = 8; i >= 1; i--) {
-            IO.print(i + " | ");
-
-            for (char letra = 'a'; letra <= 'h'; letra++) {
-                String posicion = "" + letra + i;
-                Pieza pieza = tablero.get(posicion);
-
-                if (pieza == null) {
-                    IO.print(" * ");
-                } else {
-                    String inicialTipo = pieza.getTipo().substring(0, 1);
-                    String inicialColor = pieza.getColor().equals(BLANCA) ? "B" : "N";
-                    IO.print(inicialTipo + inicialColor + " ");
-                }
-            }
-            IO.println();
-        }
-        IO.println("----------------------------");
-        IO.println("     a  b  c  d  e  f  g  h\n");
     }
 
     private void inicializarTablero() {
@@ -91,5 +82,43 @@ public class PartidaAjedrez {
         tablero.put('d' + "8", new Pieza(QUEEN, NEGRA));
         tablero.put('e' + "1", new Pieza(KING, BLANCA));
         tablero.put('e' + "8", new Pieza(KING, NEGRA));
+    }
+
+    public void mostrarTablero() {
+        IO.println("\nTablero de Ajedrez");
+        IO.println("----------------------------");
+
+        for (int i = 8; i >= 1; i--) {
+            IO.print(i + " | ");
+
+            for (char letra = 'a'; letra <= 'h'; letra++) {
+                String posicion = "" + letra + i;
+                Pieza pieza = tablero.get(posicion);
+
+                if (pieza == null) {
+                    IO.print(" * ");
+                } else {
+                    String inicialTipo = pieza.getTipo().substring(0, 1);
+                    String inicialColor = pieza.getColor().equals(BLANCA) ? "B" : "N";
+                    IO.print(inicialTipo + inicialColor + " ");
+                }
+            }
+            IO.println();
+        }
+        IO.println("----------------------------");
+        IO.println("     a  b  c  d  e  f  g  h\n");
+    }
+
+    public void iniciarPartida(String jugadorBlancas, String jugadorNegras) {
+
+        IO.println("\nIniciando partida");
+        IO.println("\nJugador 1: [" + jugadorBlancas + "]");
+        IO.println("\nJugador 2: [" + jugadorNegras + "]");
+
+        movimientos.clear();
+        tablero.clear();
+
+        mostrarTablero();
+
     }
 }

@@ -53,11 +53,11 @@ public class Pila {
             throw new RuntimeException("La pila está vacía");
         }
 
-        IO.println("-----CIMA------");
+        IO.print("CIMA -> ");
         for (int i = tope; i >= 0; i--) {
-            IO.println("[" + pila[i] + "]");
+            IO.print("[" + pila[i] + "]");
         }
-        IO.println("-----FINAL------");
+        IO.println(" <- FINAL");
     }
 
 }
