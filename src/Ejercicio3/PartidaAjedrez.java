@@ -18,6 +18,8 @@ public class PartidaAjedrez {
 
     private String jugadorBlancas;
     private String jugadorNegras;
+    private String turnoActual = BLANCA;
+    private int movimientosSinCaptura = 0;
     private LinkedList<String> movimientos;
     private Map<String, Pieza> tablero;
 
@@ -110,15 +112,264 @@ public class PartidaAjedrez {
     }
 
     public void iniciarPartida(String jugadorBlancas, String jugadorNegras) {
-
         IO.println("\nIniciando partida");
-        IO.println("\nJugador 1: [" + jugadorBlancas + "]");
-        IO.println("\nJugador 2: [" + jugadorNegras + "]");
+
+        this.jugadorBlancas = jugadorBlancas;
+        this.jugadorNegras = jugadorNegras;
 
         movimientos.clear();
         tablero.clear();
 
-        mostrarTablero();
+        IO.println("\nJugador 1: [" + jugadorBlancas + "]");
+        IO.println("\nJugador 2: [" + jugadorNegras + "]");
 
+        inicializarTablero();
+        mostrarTablero();
+    }
+
+    public void realizarMovimiento(String movimiento) {
+        String[] movimientoRealizado = movimiento.split("-");
+        if (movimientoRealizado.length != 2) {
+            IO.println("Formato de movimiento no válido. Use [posicionInicial(e2)-posicionFinal(e4)]");
+        }
+
+        String origen = movimientoRealizado[0];
+        String destino = movimientoRealizado[1];
+
+        Pieza piezaOrigen = tablero.get(origen);
+        Pieza piezaDestino = tablero.get(destino);
+
+        if (piezaOrigen == null) {
+            IO.println("Error -> Pieza no encontrada en: " + origen);
+            return;
+        }
+
+        if (!turnoActual.equals(piezaOrigen.getColor())) {
+            IO.println("Error -> Es el turno de las: " + turnoActual + "s.");
+            return;
+        }
+
+        if (piezaDestino != null) {
+            if (piezaOrigen.getColor().equals(piezaDestino.getColor())) {
+                IO.println("Error -> No puedes comer una pieza del mismo color de las tuyas.");
+                return;
+            }
+        }
+
+        if (tablero.containsKey(destino)) {
+            movimientosSinCaptura = 0;
+        } else {
+            movimientosSinCaptura++;
+        }
+
+        tablero.remove(origen);
+        tablero.put(destino, piezaOrigen);
+
+        movimientos.add(movimiento);
+
+        turnoActual = (turnoActual.equals(BLANCA)) ? NEGRA : BLANCA;
+
+        IO.println("Movimiento realizado con éxito");
+
+        mostrarTablero();
+        IO.println("Turno de: " + turnoActual);
+    }
+
+    public Pieza obtenerPiezaEnPosicion(String posicion) {
+        if (posicion == null || posicion.length() != 2) {
+            return null;
+        }
+
+        return tablero.get(posicion);
+    }
+
+    public LinkedList<String> obtenerMovimientosPosibles(String posicion) {
+        LinkedList<String> posibles = new LinkedList<>();
+        Pieza pieza = obtenerPiezaEnPosicion(posicion);
+        if (pieza == null) return posibles;
+
+        char col = posicion.charAt(0);
+        int fila = Character.getNumericValue(posicion.charAt(1));
+
+        switch (pieza.getTipo()) {
+            case PEON:
+                agregarLogicaPeon(posibles, fila, col, pieza);
+                break;
+
+            case TORRE:
+                agregarMovimientosEnLinea(posibles, fila, col, new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}, pieza);
+                break;
+
+            case ALFIL:
+                agregarMovimientosEnLinea(posibles, fila, col, new int[][]{{1, 1}, {1, -1}, {-1, 1}, {-1, -1}}, pieza);
+                break;
+
+            case CABALLO:
+                agregarMovimientosSaltando(posibles, fila, col, new int[][]{{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -2}, {-1, 2}, {-1, -2}}, pieza);
+                break;
+
+            case QUEEN:
+                agregarMovimientosEnLinea(posibles, fila, col, new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}}, pieza);
+                break;
+
+            case KING:
+                agregarMovimientosSaltando(posibles, fila, col, new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}}, pieza);
+                break;
+        }
+        return posibles;
+    }
+
+    public boolean esEmpate() {
+        if (movimientosSinCaptura >= 50) return true;
+        if (tablero.size() == 2) return true;
+
+        if (!tieneMovimientosLegales(turnoActual) && !estaEnJaque(turnoActual)) {
+            IO.println("Empate: Rey ahogado.");
+            return true;
+        }
+        return false;
+    }
+
+    public boolean esJaqueMate() {
+        if (!estaEnJaque(turnoActual)) {
+            return false;
+        }
+
+        for (Map.Entry<String, Pieza> entrada : tablero.entrySet()) {
+            String posOrigen = entrada.getKey();
+            Pieza pieza = entrada.getValue();
+
+            if (pieza.getColor().equals(turnoActual)) {
+                LinkedList<String> movimientosPosibles = obtenerMovimientosPosibles(posOrigen);
+
+                for (String posDestino : movimientosPosibles) {
+                    Pieza piezaComida = tablero.get(posDestino);
+
+                    tablero.put(posDestino, pieza);
+                    tablero.remove(posOrigen);
+
+                    boolean sigueEnJaque = estaEnJaque(turnoActual);
+
+                    tablero.put(posOrigen, pieza);
+                    if (piezaComida != null) {
+                        tablero.put(posDestino, piezaComida);
+                    } else {
+                        tablero.remove(posDestino);
+                    }
+
+                    if (!sigueEnJaque) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        IO.println("¡Jaque Mate! El jugador de las " + (turnoActual.equals(BLANCA) ? NEGRA : BLANCA) + "s gana.");
+        return true;
+    }
+
+    public LinkedList<String> obtenerMovimientos() {
+        return this.movimientos;
+    }
+
+    private void agregarMovimientosEnLinea(LinkedList<String> posibles, int fila, char col, int[][] direcciones, Pieza piezaOriginal) {
+        for (int[] dir : direcciones) {
+            int nFila = fila + dir[0];
+            char nCol = (char) (col + dir[1]);
+
+            while (nFila >= 1 && nFila <= 8 && nCol >= 'a' && nCol <= 'h') {
+                String destino = "" + nCol + nFila;
+                Pieza poisbleDestino = tablero.get(destino);
+
+                if (poisbleDestino == null) {
+                    posibles.add(destino);
+                } else {
+                    if (!poisbleDestino.getColor().equals(piezaOriginal.getColor())) {
+                        posibles.add(destino);
+                    }
+                    break;
+                }
+                nFila += dir[0];
+                nCol = (char) (nCol + dir[1]);
+            }
+        }
+    }
+
+    private void agregarMovimientosSaltando(LinkedList<String> posibles, int fila, char col, int[][] saltos, Pieza piezaOriginal) {
+        for (int[] s : saltos) {
+            int nFila = fila + s[0];
+            char nCol = (char) (col + s[1]);
+
+            if (nFila >= 1 && nFila <= 8 && nCol >= 'a' && nCol <= 'h') {
+                String destino = "" + nCol + nFila;
+                Pieza posibleDestino = tablero.get(destino);
+                if (posibleDestino == null || !posibleDestino.getColor().equals(piezaOriginal.getColor())) {
+                    posibles.add(destino);
+                }
+            }
+        }
+    }
+
+    private void agregarLogicaPeon(LinkedList<String> posibles, int fila, char col, Pieza piezaOriginal) {
+        int avance = piezaOriginal.getColor().equals(BLANCA) ? 1 : -1;
+        String adelante = "" + col + (fila + avance);
+        if (fila + avance >= 1 && fila + avance <= 8) {
+            if (tablero.get(adelante) == null) {
+                posibles.add(adelante);
+
+                boolean estaEnElInicio = (piezaOriginal.getColor().equals(BLANCA) && fila == 2) ||
+                        (piezaOriginal.getColor().equals(NEGRA) && fila == 7);
+                String adelanteDoble = "" + col + (fila + (avance * 2));
+
+                if (estaEnElInicio && tablero.get(adelanteDoble) == null) {
+                    posibles.add(adelanteDoble);
+                }
+            }
+
+            // Capturas diagonales
+            char[] columnaDiagonal = {(char) (col - 1), (char) (col + 1)};
+            for (char cDiag : columnaDiagonal) {
+                if (cDiag >= 'a' && cDiag <= 'h') {
+                    String posicionDiagonal = "" + cDiag + (fila + avance);
+                    Pieza pEnemiga = tablero.get(posicionDiagonal);
+
+                    if (pEnemiga != null && !pEnemiga.getColor().equals(piezaOriginal.getColor())) {
+                        posibles.add(posicionDiagonal);
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean tieneMovimientosLegales(String color) {
+        for (Map.Entry<String, Pieza> casilla : tablero.entrySet()) {
+            Pieza p = casilla.getValue();
+            if (p.getColor().equals(color)) {
+                if (!obtenerMovimientosPosibles(casilla.getKey()).isEmpty()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean estaEnJaque(String colorRey) {
+        String posRey = "";
+        for (Map.Entry<String, Pieza> entry : tablero.entrySet()) {
+            if (entry.getValue().getTipo().equals(KING) && entry.getValue().getColor().equals(colorRey)) {
+                posRey = entry.getKey();
+                break;
+            }
+        }
+
+        String colorEnemigo = colorRey.equals(BLANCA) ? NEGRA : BLANCA;
+        for (Map.Entry<String, Pieza> entry : tablero.entrySet()) {
+            if (entry.getValue().getColor().equals(colorEnemigo)) {
+                if (obtenerMovimientosPosibles(entry.getKey()).contains(posRey)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
