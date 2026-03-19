@@ -27,16 +27,12 @@ public class PartidaAjedrez {
         return jugadorBlancas;
     }
 
-    public void setJugadorBlancas(String jugadorBlancas) {
-        this.jugadorBlancas = jugadorBlancas;
-    }
-
     public String getJugadorNegras() {
         return jugadorNegras;
     }
 
-    public void setJugadorNegras(String jugadorNegras) {
-        this.jugadorNegras = jugadorNegras;
+    public String getTurnoActual() {
+        return turnoActual;
     }
 
     public PartidaAjedrez(String jugadorBlancas, String jugadorNegras) {
@@ -270,6 +266,36 @@ public class PartidaAjedrez {
 
     public LinkedList<String> obtenerMovimientos() {
         return this.movimientos;
+    }
+
+    public void finalizarPartida() {
+        IO.println("\n========================================");
+        IO.println("           PARTIDA FINALIZADA           ");
+        IO.println("========================================\n");
+
+        IO.println("Jugador Blancas: " + jugadorBlancas);
+        IO.println("Jugador Negras: " + jugadorNegras);
+        IO.println("Total de movimientos: " + movimientos.size());
+
+        IO.println("\nRESUMEN DE LA PARTIDA: ");
+        if (movimientos.isEmpty()) {
+            IO.println("No se llegaron a realizar movimientos.");
+        } else {
+            for (int i = 0; i < movimientos.size(); i++) {
+                if (i % 2 == 0) {
+                    IO.print(( (i / 2) + 1) + ". " + movimientos.get(i));
+                } else {
+                    IO.println("  |  " + movimientos.get(i));
+                }
+            }
+            IO.println("");
+        }
+
+        IO.println("\nEstado final del tablero:");
+        mostrarTablero();
+
+        IO.println("¡Gracias por jugar!");
+        IO.println("========================================\n");
     }
 
     private void agregarMovimientosEnLinea(LinkedList<String> posibles, int fila, char col, int[][] direcciones, Pieza piezaOriginal) {
