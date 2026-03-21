@@ -18,10 +18,12 @@ public class PartidaAjedrez {
 
     private String jugadorBlancas;
     private String jugadorNegras;
-    private String turnoActual = BLANCA;
-    private int movimientosSinCaptura = 0;
+    private String turnoActual;
+    private int movimientosSinCaptura;
     private LinkedList<String> movimientos;
     private Map<String, Pieza> tablero;
+    private LinkedList<String> capturadasBlancas; // Piezas negras que el blanco ha comido
+    private LinkedList<String> capturadasNegras;
 
     public String getJugadorBlancas() {
         return jugadorBlancas;
@@ -40,6 +42,10 @@ public class PartidaAjedrez {
         this.jugadorNegras = jugadorNegras;
         this.movimientos = new LinkedList<>();
         this.tablero = new HashMap<>();
+        this.capturadasBlancas = new LinkedList<>();
+        this.capturadasNegras = new LinkedList<>();
+        this.turnoActual = BLANCA;
+        this.movimientosSinCaptura = 0;
         inicializarTablero();
     }
 
@@ -84,7 +90,8 @@ public class PartidaAjedrez {
 
     public void mostrarTablero() {
         IO.println("\nTablero de Ajedrez");
-        IO.println("----------------------------");
+        IO.println("\nCapturas Negras: " + capturadasNegras);
+        IO.println("-----------------------------------------\n");
 
         for (int i = 8; i >= 1; i--) {
             IO.print(i + " | ");
@@ -105,6 +112,10 @@ public class PartidaAjedrez {
         }
         IO.println("----------------------------");
         IO.println("     a  b  c  d  e  f  g  h\n");
+
+        IO.println("Capturas Blancas: " + capturadasBlancas);
+        IO.println("-----------------------------------------\n");
+
     }
 
     public void iniciarPartida(String jugadorBlancas, String jugadorNegras) {
@@ -115,6 +126,8 @@ public class PartidaAjedrez {
 
         movimientos.clear();
         tablero.clear();
+        capturadasBlancas.clear();
+        capturadasNegras.clear();
 
         IO.println("\nJugador 1: [" + jugadorBlancas + "]");
         IO.println("\nJugador 2: [" + jugadorNegras + "]");
@@ -123,10 +136,14 @@ public class PartidaAjedrez {
         mostrarTablero();
     }
 
-    public void realizarMovimiento(String movimiento) {
+    public boolean realizarMovimiento(String movimiento) {
+        if (movimiento == null) return false;
+        movimiento = movimiento.trim().toLowerCase();
+
         String[] movimientoRealizado = movimiento.split("-");
         if (movimientoRealizado.length != 2) {
             IO.println("Formato de movimiento no válido. Use [posicionInicial(e2)-posicionFinal(e4)]");
+            return false;
         }
 
         String origen = movimientoRealizado[0];
@@ -137,38 +154,55 @@ public class PartidaAjedrez {
 
         if (piezaOrigen == null) {
             IO.println("Error -> Pieza no encontrada en: " + origen);
-            return;
+            return false;
         }
-
         if (!turnoActual.equals(piezaOrigen.getColor())) {
             IO.println("Error -> Es el turno de las: " + turnoActual + "s.");
-            return;
+            return false;
+        }
+
+        LinkedList<String> movimientoLegales = obtenerMovimientosPosibles(origen);
+        if (!movimientoLegales.contains(destino)) {
+            IO.println("Error -> El movimiento " + movimiento + " no es legal para esta pieza.");
+            return false;
+        }
+
+        tablero.put(destino, piezaOrigen);
+        tablero.remove(origen);
+
+        if (estaEnJaque(turnoActual)) {
+            tablero.put(origen, piezaOrigen);
+            if (piezaDestino != null) {
+                tablero.put(destino, piezaDestino);
+            } else {
+                tablero.remove(destino);
+            }
+            IO.println("Error: No puedes realizar un movimiento que deje a tu Rey en jaque.");
+            return false;
         }
 
         if (piezaDestino != null) {
-            if (piezaOrigen.getColor().equals(piezaDestino.getColor())) {
-                IO.println("Error -> No puedes comer una pieza del mismo color de las tuyas.");
-                return;
+            if (piezaOrigen.getColor().equals(BLANCA)) {
+                capturadasBlancas.add(piezaDestino.getTipo());
+            } else {
+                capturadasNegras.add(piezaDestino.getTipo());
             }
-        }
-
-        if (tablero.containsKey(destino)) {
             movimientosSinCaptura = 0;
         } else {
             movimientosSinCaptura++;
         }
 
-        tablero.remove(origen);
-        tablero.put(destino, piezaOrigen);
-
         movimientos.add(movimiento);
 
         turnoActual = (turnoActual.equals(BLANCA)) ? NEGRA : BLANCA;
 
-        IO.println("Movimiento realizado con éxito");
+        if (esJaqueMate() || esEmpate()) {
+            return true;
+        }
 
+        IO.println("Movimiento realizado");
         mostrarTablero();
-        IO.println("Turno de: " + turnoActual);
+        return false;
     }
 
     public Pieza obtenerPiezaEnPosicion(String posicion) {
@@ -231,22 +265,23 @@ public class PartidaAjedrez {
             return false;
         }
 
-        for (Map.Entry<String, Pieza> entrada : tablero.entrySet()) {
-            String posOrigen = entrada.getKey();
-            Pieza pieza = entrada.getValue();
+        LinkedList<String> posiciones = new LinkedList<>(tablero.keySet());
 
-            if (pieza.getColor().equals(turnoActual)) {
-                LinkedList<String> movimientosPosibles = obtenerMovimientosPosibles(posOrigen);
+        for (String posicionOrigen : posiciones) {
+            Pieza pieza = tablero.get(posicionOrigen);
+
+            if (pieza != null && pieza.getColor().equals(turnoActual)) {
+                LinkedList<String> movimientosPosibles = obtenerMovimientosPosibles(posicionOrigen);
 
                 for (String posDestino : movimientosPosibles) {
                     Pieza piezaComida = tablero.get(posDestino);
 
                     tablero.put(posDestino, pieza);
-                    tablero.remove(posOrigen);
+                    tablero.remove(posicionOrigen);
 
                     boolean sigueEnJaque = estaEnJaque(turnoActual);
 
-                    tablero.put(posOrigen, pieza);
+                    tablero.put(posicionOrigen, pieza);
                     if (piezaComida != null) {
                         tablero.put(posDestino, piezaComida);
                     } else {
@@ -264,14 +299,12 @@ public class PartidaAjedrez {
         return true;
     }
 
-    public LinkedList<String> obtenerMovimientos() {
-        return this.movimientos;
-    }
-
     public void finalizarPartida() {
         IO.println("\n========================================");
         IO.println("           PARTIDA FINALIZADA           ");
         IO.println("========================================\n");
+
+        LinkedList<String> movimientos = obtenerMovimientos();
 
         IO.println("Jugador Blancas: " + jugadorBlancas);
         IO.println("Jugador Negras: " + jugadorNegras);
@@ -283,7 +316,7 @@ public class PartidaAjedrez {
         } else {
             for (int i = 0; i < movimientos.size(); i++) {
                 if (i % 2 == 0) {
-                    IO.print(( (i / 2) + 1) + ". " + movimientos.get(i));
+                    IO.print(((i / 2) + 1) + ". " + movimientos.get(i));
                 } else {
                     IO.println("  |  " + movimientos.get(i));
                 }
@@ -293,9 +326,16 @@ public class PartidaAjedrez {
 
         IO.println("\nEstado final del tablero:");
         mostrarTablero();
+        IO.println("\nRECUENTO DE BAJAS:");
+        IO.println(jugadorBlancas + " (Blancas) capturó: " + capturadasBlancas);
+        IO.println(jugadorNegras + " (Negras) capturó: " + capturadasNegras);
 
         IO.println("¡Gracias por jugar!");
         IO.println("========================================\n");
+    }
+
+    private LinkedList<String> obtenerMovimientos() {
+        return this.movimientos;
     }
 
     private void agregarMovimientosEnLinea(LinkedList<String> posibles, int fila, char col, int[][] direcciones, Pieza piezaOriginal) {
@@ -305,12 +345,12 @@ public class PartidaAjedrez {
 
             while (nFila >= 1 && nFila <= 8 && nCol >= 'a' && nCol <= 'h') {
                 String destino = "" + nCol + nFila;
-                Pieza poisbleDestino = tablero.get(destino);
+                Pieza posibleDestino = tablero.get(destino);
 
-                if (poisbleDestino == null) {
+                if (posibleDestino == null) {
                     posibles.add(destino);
                 } else {
-                    if (!poisbleDestino.getColor().equals(piezaOriginal.getColor())) {
+                    if (!posibleDestino.getColor().equals(piezaOriginal.getColor())) {
                         posibles.add(destino);
                     }
                     break;

@@ -18,28 +18,23 @@ public class MainAjedrez {
 
         boolean partidaActiva = true;
 
-        while (partidaActiva) {
-            partida.mostrarTablero();
+        partida.iniciarPartida(jugadorBlancas, jugadorNegras);
 
-            IO.println("Turno de: " + (partida.getTurnoActual().equals(PartidaAjedrez.BLANCA) ? jugadorBlancas : jugadorNegras));
+        while (partidaActiva) {
+            String nombreActual = (partida.getTurnoActual().equals(PartidaAjedrez.BLANCA))
+                    ? partida.getJugadorBlancas()
+                    : partida.getJugadorNegras();
+            IO.println("Turno de: " + (nombreActual));
             IO.print("Introduce movimiento (ej: e2-e4) o 'salir': ");
             String entrada = sc.nextLine().toLowerCase();
 
             if (entrada.equals("salir")) {
-                partidaActiva = false;
                 IO.println("Partida abandonada.");
                 break;
             }
 
-            // 3. Ejecutar movimiento
-            partida.realizarMovimiento(entrada);
-
-            // 4. Comprobaciones de fin de partida
-            if (partida.esJaqueMate()) {
-                IO.println("¡JAQUE MATE! La partida ha terminado.");
-                partidaActiva = false;
-            } else if (partida.esEmpate()) {
-                IO.println("La partida ha terminado en EMPATE.");
+            // Comprobaciones de fin de partida
+            if (partida.realizarMovimiento(entrada)) {
                 partidaActiva = false;
             }
         }
