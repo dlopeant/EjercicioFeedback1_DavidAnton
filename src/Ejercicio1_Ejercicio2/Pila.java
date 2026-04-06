@@ -15,7 +15,7 @@ public class Pila {
         this(tamañoPorDefecto);
     }
 
-    public int tamañoPila() {
+    public int getTamaño() {
         return tope + 1;
     }
 
@@ -40,11 +40,12 @@ public class Pila {
         }
     }
 
-    public void eliminarElemento() {
+    public int eliminarElemento() {
         if (!pilaVacia()) {
-            tope--;
+            return pila[tope--];
         } else {
             IO.println("Error: Pila vacía");
+            return -1;
         }
     }
 
